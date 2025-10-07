@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -10,6 +10,8 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import os from "os";
+import express from "express";
+import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -357,9 +359,32 @@ class SessionLoggerServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Session Logger MCP server running on stdio");
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    app.use(cors());
+    app.use(express.json());
+
+    app.get("/health", (_req, res) => {
+      res.json({ status: "ok" });
+    });
+
+    app.post("/sse", async (req, res) => {
+      console.error("Client connected via SSE");
+
+      const transport = new SSEServerTransport("/message", res);
+      await this.server.connect(transport);
+
+      req.on("close", () => {
+        console.error("Client disconnected");
+      });
+    });
+
+    app.listen(PORT, () => {
+      console.error(`Session Logger MCP server running on http://localhost:${PORT}`);
+      console.error(`Health check: http://localhost:${PORT}/health`);
+      console.error(`SSE endpoint: http://localhost:${PORT}/sse`);
+    });
   }
 }
 

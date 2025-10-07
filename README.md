@@ -15,7 +15,17 @@ An MCP server that saves and queries LLM chat conversations to structured log fi
 npm install
 ```
 
-2. Configure in Claude Desktop or Claude Code:
+2. Start the MCP server:
+```bash
+npm start
+```
+
+The server will run on `http://localhost:3000` by default. You can set a custom port with the `PORT` environment variable:
+```bash
+PORT=8080 npm start
+```
+
+3. Configure in Claude Desktop or Claude Code:
 
 Add to your MCP settings file:
 
@@ -24,8 +34,7 @@ Add to your MCP settings file:
 {
   "mcpServers": {
     "session-logger": {
-      "command": "node",
-      "args": ["/Users/davinoishi/Documents/Projects-AI/session-logger-mcp/index.js"]
+      "url": "http://localhost:3000/sse"
     }
   }
 }
@@ -36,14 +45,15 @@ Add to your MCP settings file:
 {
   "mcpServers": {
     "session-logger": {
-      "command": "node",
-      "args": ["/Users/davinoishi/Documents/Projects-AI/session-logger-mcp/index.js"]
+      "url": "http://localhost:3000/sse"
     }
   }
 }
 ```
 
-3. Restart Claude Desktop or Claude Code
+**For remote access**, replace `localhost:3000` with your server's IP address or domain name.
+
+4. Restart Claude Desktop or Claude Code
 
 ## Usage
 

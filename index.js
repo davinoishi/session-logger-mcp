@@ -37,6 +37,9 @@ class SessionLoggerServer {
       }
     );
 
+    // Store SSE transports by session ID
+    this.transports = {};
+
     this.setupToolHandlers();
     this.server.onerror = (error) => console.error("[MCP Error]", error);
     process.on("SIGINT", async () => {
@@ -369,15 +372,36 @@ class SessionLoggerServer {
       res.json({ status: "ok" });
     });
 
-    app.post("/sse", async (req, res) => {
+    // SSE endpoint for establishing connection
+    app.get("/sse", async (req, res) => {
       console.error("Client connected via SSE");
 
-      const transport = new SSEServerTransport("/message", res);
-      await this.server.connect(transport);
+      const transport = new SSEServerTransport("/messages", res);
+      const sessionId = transport.sessionId;
 
-      req.on("close", () => {
-        console.error("Client disconnected");
+      // Store transport by session ID
+      this.transports[sessionId] = transport;
+
+      // Clean up on disconnect
+      res.on("close", () => {
+        console.error(`Client disconnected (session: ${sessionId})`);
+        delete this.transports[sessionId];
       });
+
+      await this.server.connect(transport);
+    });
+
+    // Message endpoint for receiving client messages
+    app.post("/messages", async (req, res) => {
+      const sessionId = req.query.sessionId;
+      const transport = this.transports[sessionId];
+
+      if (!transport) {
+        console.error(`No transport found for session: ${sessionId}`);
+        return res.status(400).json({ error: "Invalid session ID" });
+      }
+
+      await transport.handlePostMessage(req, res, req.body);
     });
 
     app.listen(PORT, () => {
